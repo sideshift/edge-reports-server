@@ -14,6 +14,7 @@ import { godex } from './partners/godex'
 import { libertyx } from './partners/libertyx'
 import { moonpay } from './partners/moonpay'
 import { safello } from './partners/safello'
+import { shapeshift } from './partners/shapeshift'
 import { simplex } from './partners/simplex'
 import { switchain } from './partners/switchain'
 import { totle } from './partners/totle'
@@ -45,6 +46,7 @@ const partners = [
   libertyx,
   moonpay,
   safello,
+  shapeshift,
   switchain,
   totle,
   simplex,
