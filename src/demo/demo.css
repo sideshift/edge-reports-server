@@ -1,0 +1,57 @@
+#hello-text {
+    font-size: 70;
+}
+
+.row {
+    width: 100%;
+    height: 100vh;
+}
+
+.column {
+    float: left;
+}
+  
+.sidebar {
+    background-color: cyan;
+    width: 17%;
+    min-height: 100vh;
+}
+  
+.graphs {
+    width: 83%;
+}
+   
+#range {
+    color: white;
+    text-align: center;
+}
+
+.sidebar-container {
+    margin-top: 12px;
+    width: 100%;
+}
+
+.sidebar-text {
+    margin-left: 6px;
+    color: white;
+}
+ 
+button {
+    background-color: Transparent;
+    color: white;
+    background-repeat:no-repeat;
+    border: none;
+    cursor:pointer;
+    overflow: hidden;
+    outline:none;
+}
+
+.time-period {
+    color: black;
+}
+
+html, body { 
+    margin:0; 
+    padding:0; 
+    height:100vh; 
+}

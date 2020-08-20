@@ -108,7 +108,7 @@ const LineGraph: any = (props: {
     <ResponsiveLine
       data={data}
       theme={theme}
-      margin={{ top: 70, right: 80, bottom: 100, left: 80 }}
+      margin={{ top: 70, right: 65, bottom: 100, left: 80 }}
       xScale={{ type: 'point' }}
       yScale={{
         type: 'linear',

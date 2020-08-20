@@ -1,4 +1,5 @@
 import 'regenerator-runtime/runtime'
+import './demo.css'
 
 import fetch from 'node-fetch'
 import React, { Component } from 'react'
@@ -227,98 +228,104 @@ class App extends Component<
     })
     return (
       <>
-        <div>
-          <button onClick={() => this.changeMonth()}>Month</button>
-          <button onClick={() => this.changeDay()}>Day</button>
-          <button onClick={() => this.changeHour()}>Hour</button>
-        </div>
-        <div>
-          <button
-            onClick={async () => {
-              await this.lastDay()
-            }}
-          >
-            Yesterday
-          </button>
-          <button
-            onClick={async () => {
-              await this.thisDay()
-            }}
-          >
-            Today
-          </button>
-          <button
-            onClick={async () => {
-              await this.lastWeek()
-            }}
-          >
-            Last Week
-          </button>
-          <button
-            onClick={async () => {
-              await this.thisWeek()
-            }}
-          >
-            This Week
-          </button>
-          <button
-            onClick={async () => {
-              await this.lastMonth()
-            }}
-          >
-            Last Month
-          </button>
-          <button
-            onClick={async () => {
-              await this.thisMonth()
-            }}
-          >
-            This Month
-          </button>
-          <button
-            onClick={async () => {
-              await this.lastQuarter()
-            }}
-          >
-            Last Quarter
-          </button>
-          <button
-            onClick={async () => {
-              await this.thisQuarter()
-            }}
-          >
-            This Quarter
-          </button>
-        </div>
-        <button
-          onClick={async () => {
-            await this.getData(
-              this.state.pluginIds,
-              this.state.start,
-              this.state.end
-            )
-          }}
-        >
-          Get Data
-        </button>
-        <div>{this.state.start}</div>
-        <div>{this.state.end}</div>
-        <div>{this.state.pluginIds}</div>
-        <div>{this.state.timePeriod}</div>
-        {this.state.data.length > 0 && (
-          <div>
-            {this.state.timePeriod === 'Month' && (
-              <BarGraph rawData={this.state.data} timePeriod="Month" />
-            )}
-            {this.state.timePeriod === 'Day' && (
-              <BarGraph rawData={this.state.data} timePeriod="Day" />
-            )}
-            {this.state.timePeriod === 'Hour' && (
-              <BarGraph rawData={this.state.data} timePeriod="Hour" />
-            )}
+        <div className="row">
+          <div className="sidebar column">
+            <div className="sidebar-container sidebar-text">Range</div>
+            <div className="sidebar-container">
+              <button
+                onClick={async () => {
+                  await this.lastDay()
+                }}
+              >
+                Yesterday
+              </button>
+            </div>
+            <div className="sidebar-container">
+              <button
+                onClick={async () => {
+                  await this.thisDay()
+                }}
+              >
+                Today
+              </button>
+            </div>
+            <div className="sidebar-container">
+              <button
+                onClick={async () => {
+                  await this.lastWeek()
+                }}
+              >
+                Last Week
+              </button>
+            </div>
+            <div className="sidebar-container">
+              <button
+                onClick={async () => {
+                  await this.thisWeek()
+                }}
+              >
+                This Week
+              </button>
+            </div>
+            <div className="sidebar-container">
+              <button
+                onClick={async () => {
+                  await this.lastMonth()
+                }}
+              >
+                Last Month
+              </button>
+            </div>
+            <div className="sidebar-container">
+              <button
+                onClick={async () => {
+                  await this.thisMonth()
+                }}
+              >
+                This Month
+              </button>
+            </div>
+            <div className="sidebar-container">
+              <button
+                onClick={async () => {
+                  await this.lastQuarter()
+                }}
+              >
+                Last Quarter
+              </button>
+            </div>
+            <div className="sidebar-container">
+              <button
+                onClick={async () => {
+                  await this.thisQuarter()
+                }}
+              >
+                This Quarter
+              </button>
+            </div>
           </div>
-        )}
-        <div>{lineGraphs}</div>
+          <div className="graphs column">
+            <div>
+              <button className="time-period" onClick={() => this.changeHour()}>Hourly</button>
+              <button className="time-period" onClick={() => this.changeDay()}>Daily</button>
+              <button className="time-period" onClick={() => this.changeMonth()}>Monthly</button>
+            </div>
+            {this.state.data.length > 0 && (
+              <div>
+                {this.state.timePeriod === 'Month' && (
+                  <BarGraph rawData={this.state.data} timePeriod="Month" />
+                )}
+                {this.state.timePeriod === 'Day' && (
+                  <BarGraph rawData={this.state.data} timePeriod="Day" />
+                )}
+                {this.state.timePeriod === 'Hour' && (
+                  <BarGraph rawData={this.state.data} timePeriod="Hour" />
+                )}
+              </div>
+            )}
+            <div>{lineGraphs}</div>
+          </div>
+        </div>
       </>
     )
   }
