@@ -1,5 +1,5 @@
 import bodyParser from 'body-parser'
-import { asArray, asNumber, asObject, asString } from 'cleaners'
+import { asArray, asMap, asNumber, asObject, asString } from 'cleaners'
 import cors from 'cors'
 import express from 'express'
 import nano from 'nano'
@@ -34,17 +34,26 @@ const asDbReq = asObject({
   )
 })
 
+const asPluginIdsReq = asObject({
+  appId: asString
+})
+
+const asPluginIdsDbReq = asObject({
+  pluginIds: asMap(asMap(asString))
+})
+
 const nanoDb = nano(config.couchDbFullpath)
 
 async function main(): Promise<void> {
   // start express and couch db server
   const app = express()
   const reportsTransactions = nanoDb.use('reports_transactions')
+  const reportsApps = nanoDb.use('reports_apps')
 
   app.use(bodyParser.json({ limit: '1mb' }))
   app.use(cors())
 
-  app.get(`/v1/analytics/`, async function(req, res) {
+  app.get(`/v1/analytics/`, async function (req, res) {
     let analyticsQuery: ReturnType<typeof asAnalyticsReq>
     try {
       analyticsQuery = asAnalyticsReq(req.query)
@@ -90,7 +99,7 @@ async function main(): Promise<void> {
       await reportsTransactions.partitionedFind(appAndPluginId, query)
     )
     // TODO: put the sort within the query, need to add default indexs in the database.
-    const sortedTxs = result.docs.sort(function(a, b) {
+    const sortedTxs = result.docs.sort(function (a, b) {
       return a.timestamp - b.timestamp
     })
     const answer = getAnalytics(
@@ -103,7 +112,7 @@ async function main(): Promise<void> {
     res.json(answer)
   })
 
-  app.get('/v1/checkTx/', async function(req, res) {
+  app.get('/v1/checkTx/', async function (req, res) {
     let queryResult
     try {
       queryResult = asCheckTxReq(req.query)
@@ -133,12 +142,33 @@ async function main(): Promise<void> {
     res.json(out)
   })
 
+  app.get('/v1/getPluginIds/', async function (req, res) {
+    let queryResult
+    try {
+      queryResult = asPluginIdsReq(req.query)
+    } catch (e) {
+      res.status(400).send(`Missing Request fields.`)
+      return
+    }
+    const query = {
+      selector: {
+        appId: { $eq: queryResult.appId.toLowerCase() }
+      },
+      fields: ['pluginIds'],
+      limit: 1
+    }
+    const rawApp = await reportsApps.find(query)
+    const app = asPluginIdsDbReq(rawApp.docs[0])
+    const pluginNames = Object.keys(app.pluginIds)
+    res.json(pluginNames)
+  })
+
   const result = await reportsTransactions.get(
     'edge_bitrefill:5f1fa3a729733f0004b8b9ee'
   )
   console.log('result', result)
 
-  app.listen(3000, function() {
+  app.listen(3000, function () {
     console.log('Server started on Port 3000')
   })
 }
