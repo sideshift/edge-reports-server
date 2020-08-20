@@ -59,6 +59,8 @@
     "typescript": "^3.8.2"
   },
   "dependencies": {
+    "@nivo/bar": "^0.62.0",
+    "@nivo/line": "^0.62.0",
     "@types/node": "^14.0.22",
     "api-changelly": "git://github.com/changelly/api-changelly.git#8e350f3",
     "axios": "^0.19.2",
@@ -68,6 +70,7 @@
     "cors": "^2.8.5",
     "express": "^4.17.1",
     "nano": "^8.2.2",
+    "nivo": "^0.31.0",
     "node-fetch": "^2.6.0",
     "web3": "^1.2.11"
   }
