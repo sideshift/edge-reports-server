@@ -69,7 +69,7 @@ const partners = [
   wyre
 ]
 const QUERY_FREQ_MS = 29 * 60 * 1000
-const snooze: Function = async (ms: number) =>
+const snooze: Function = async(ms: number) =>
   new Promise((resolve: Function) => setTimeout(resolve, ms))
 
 export async function queryEngine(): Promise<void> {

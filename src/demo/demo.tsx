@@ -21,7 +21,8 @@ interface AnalyticsResult {
     day: Bucket[]
     month: Bucket[]
   }
-  appAndPluginId: string
+  app: string
+  pluginId: string
   start: number
   end: number
 }
@@ -197,12 +198,7 @@ class App extends Component<
     const newData = await Promise.all(promises)
     // discard all entries with 0 usdValue on every bucket
     const trimmedData = newData.filter(data => {
-      if (
-        Math.max.apply(
-          Math,
-          data.result.month.map(x => x.usdValue)
-        ) !== 0
-      ) {
+      if (Math.max(...data.result.month.map(x => x.usdValue)) !== 0) {
         return data
       }
     })
@@ -233,7 +229,7 @@ class App extends Component<
             <div className="sidebar-container sidebar-text">Range</div>
             <div className="sidebar-container">
               <button
-                onClick={async () => {
+                onClick={async() => {
                   await this.lastDay()
                 }}
               >
@@ -242,7 +238,7 @@ class App extends Component<
             </div>
             <div className="sidebar-container">
               <button
-                onClick={async () => {
+                onClick={async() => {
                   await this.thisDay()
                 }}
               >
@@ -251,7 +247,7 @@ class App extends Component<
             </div>
             <div className="sidebar-container">
               <button
-                onClick={async () => {
+                onClick={async() => {
                   await this.lastWeek()
                 }}
               >
@@ -260,7 +256,7 @@ class App extends Component<
             </div>
             <div className="sidebar-container">
               <button
-                onClick={async () => {
+                onClick={async() => {
                   await this.thisWeek()
                 }}
               >
@@ -269,7 +265,7 @@ class App extends Component<
             </div>
             <div className="sidebar-container">
               <button
-                onClick={async () => {
+                onClick={async() => {
                   await this.lastMonth()
                 }}
               >
@@ -278,7 +274,7 @@ class App extends Component<
             </div>
             <div className="sidebar-container">
               <button
-                onClick={async () => {
+                onClick={async() => {
                   await this.thisMonth()
                 }}
               >
@@ -287,7 +283,7 @@ class App extends Component<
             </div>
             <div className="sidebar-container">
               <button
-                onClick={async () => {
+                onClick={async() => {
                   await this.lastQuarter()
                 }}
               >
@@ -296,7 +292,7 @@ class App extends Component<
             </div>
             <div className="sidebar-container">
               <button
-                onClick={async () => {
+                onClick={async() => {
                   await this.thisQuarter()
                 }}
               >
@@ -306,9 +302,18 @@ class App extends Component<
           </div>
           <div className="graphs column">
             <div>
-              <button className="time-period" onClick={() => this.changeHour()}>Hourly</button>
-              <button className="time-period" onClick={() => this.changeDay()}>Daily</button>
-              <button className="time-period" onClick={() => this.changeMonth()}>Monthly</button>
+              <button className="time-period" onClick={() => this.changeHour()}>
+                Hourly
+              </button>
+              <button className="time-period" onClick={() => this.changeDay()}>
+                Daily
+              </button>
+              <button
+                className="time-period"
+                onClick={() => this.changeMonth()}
+              >
+                Monthly
+              </button>
             </div>
             {this.state.data.length > 0 && (
               <div>

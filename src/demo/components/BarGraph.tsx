@@ -15,7 +15,8 @@ interface AnalyticsResult {
     day: Bucket[]
     month: Bucket[]
   }
-  appAndPluginId: string
+  app: string
+  pluginId: string
   start: number
   end: number
 }
@@ -33,8 +34,10 @@ const BarGraph: any = (props: {
 }) => {
   // Creating Labels for the Legend
   const keys = props.rawData.map(analyticsResult => {
-    const split: string[] = analyticsResult.appAndPluginId.split('_')
-    return split[1].charAt(0).toUpperCase() + split[1].slice(1)
+    return (
+      analyticsResult.pluginId.charAt(0).toUpperCase() +
+      analyticsResult.pluginId.slice(1)
+    )
   })
   // An array of all ticks that will be displayed on the bottom X axis.
   const tickRate: string[] = []
@@ -55,8 +58,9 @@ const BarGraph: any = (props: {
     })
     for (let i = 0; i < props.rawData.length; i++) {
       for (let j = 0; j < props.rawData[0].result.month.length; j++) {
-        const split: string[] = props.rawData[i].appAndPluginId.split('_')
-        const graphName = split[1].charAt(0).toUpperCase() + split[1].slice(1)
+        const graphName =
+          props.rawData[i].pluginId.charAt(0).toUpperCase() +
+          props.rawData[i].pluginId.slice(1)
         data[j][graphName] = props.rawData[i].result.month[j].usdValue
       }
     }
@@ -74,8 +78,9 @@ const BarGraph: any = (props: {
     })
     for (let i = 0; i < props.rawData.length; i++) {
       for (let j = 0; j < props.rawData[0].result.day.length; j++) {
-        const split: string[] = props.rawData[i].appAndPluginId.split('_')
-        const graphName = split[1].charAt(0).toUpperCase() + split[1].slice(1)
+        const graphName =
+          props.rawData[i].pluginId.charAt(0).toUpperCase() +
+          props.rawData[i].pluginId.slice(1)
         data[j][graphName] = props.rawData[i].result.day[j].usdValue
       }
     }
@@ -93,8 +98,9 @@ const BarGraph: any = (props: {
     })
     for (let i = 0; i < props.rawData.length; i++) {
       for (let j = 0; j < props.rawData[0].result.hour.length; j++) {
-        const split: string[] = props.rawData[i].appAndPluginId.split('_')
-        const graphName = split[1].charAt(0).toUpperCase() + split[1].slice(1)
+        const graphName =
+          props.rawData[i].pluginId.charAt(0).toUpperCase() +
+          props.rawData[i].pluginId.slice(1)
         data[j][graphName] = props.rawData[i].result.hour[j].usdValue
       }
     }

@@ -15,7 +15,8 @@ interface AnalyticsResult {
     day: Bucket[]
     month: Bucket[]
   }
-  appAndPluginId: string
+  app: string
+  pluginId: string
   start: number
   end: number
 }
@@ -77,11 +78,12 @@ const LineGraph: any = (props: {
       }
     })
   }
-  const split: string[] = props.analyticsRequest.appAndPluginId.split('_')
-  const graphName = split[1].charAt(0).toUpperCase() + split[1].slice(1)
+
   const data = [
     {
-      id: graphName,
+      id:
+        props.analyticsRequest.pluginId.charAt(0).toUpperCase() +
+        props.analyticsRequest.pluginId.slice(1),
       color: 'hsl(317, 70%, 50%)',
       data: inputData
     }
