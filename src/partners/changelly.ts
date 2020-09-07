@@ -113,6 +113,10 @@ export async function queryChangelly(
       undefined
     )
     const txs = asChangellyResult(result).result
+    if (txs.length === 0) {
+      datelog(`Changelly done at offset: ${offset}.`)
+      break
+    }
     for (const rawTx of txs) {
       if (asChangellyRawTx(rawTx).status === 'finished') {
         const tx = asChangellyTx(rawTx)
@@ -144,10 +148,6 @@ export async function queryChangelly(
           done = true
         }
       }
-    }
-    if (result.result.length < LIMIT) {
-      datelog(`Changelly done: r.len ${result.result.length} < ${LIMIT}`)
-      break
     }
     offset += LIMIT
   }
