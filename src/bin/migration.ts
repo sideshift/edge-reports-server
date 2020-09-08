@@ -26,7 +26,7 @@ const godexJSON = js.readFileSync('./src/bin/cache/gxRaw.json')
 const libertyxJSON = js.readFileSync('./src/bin/cache/libertyxRaw.json')
 const moonpayJSON = js.readFileSync('./src/bin/cache/mnpRaw.json')
 const safelloJSON = js.readFileSync('./src/bin/cache/safRaw.json')
-// const shapeshiftJSON = js.readFileSync('./src/bin/cache/ssRaw.json')
+const shapeshiftJSON = js.readFileSync('./src/bin/cache/ssRaw.json')
 const simplexJSON = js.readFileSync('./src/bin/cache/simRaw.json')
 const switchainJSON = js.readFileSync('./src/bin/cache/switchainRaw.json')
 const totleJSON = js.readFileSync('./src/bin/cache/tlRaw.json')
@@ -51,6 +51,19 @@ const asOldTx = asObject({
   outputCurrency: asString,
   outputAmount: asEither(asString, asNumber),
   timestamp: asEither(asString, asNumber)
+})
+
+const asShapeshiftTx = asObject({
+  orderId: asString,
+  inputTXID: asString,
+  inputAddress: asString,
+  inputCurrency: asString,
+  inputAmount: asNumber,
+  outputTXID: asString,
+  outputAddress: asString,
+  outputCurrency: asString,
+  outputAmount: asString,
+  timestamp: asNumber
 })
 
 const asPartner = asObject({
@@ -79,6 +92,7 @@ const oldTransactions = [
   libertyxJSON,
   moonpayJSON,
   safelloJSON,
+  shapeshiftJSON,
   simplexJSON,
   switchainJSON,
   totleJSON,
@@ -95,7 +109,12 @@ migration().catch(e => {
 async function migration(): Promise<void> {
   const reportsTransactions = nanoDb.use('reports_transactions')
   for (const partnerJSON of oldTransactions) {
-    const partner = asPartner(partnerJSON)
+    let partner
+    if (partnerJSON.name === 'shapeshift') {
+      partner = partnerJSON
+    } else {
+      partner = asPartner(partnerJSON)
+    }
     const appAndPluginId = `edge_${partner.name}`
     const query = {
       selector: {
@@ -113,22 +132,47 @@ async function migration(): Promise<void> {
       ...transactionTimestamps.docs.map(object => object.timestamp)
     )
     const earliestDate = new Date(earliestTimestamp * 1000).toISOString()
-    const oldTransactions = partner.txs.filter(
-      obj => obj.timestamp < earliestTimestamp
-    )
+    const oldTransactions = partner.txs.filter(obj => {
+      if (obj.timestamp < earliestTimestamp && obj.inputTXID !== null) {
+        if (partnerJSON.name !== 'shapeshift') {
+          return obj
+        }
+        if (obj.status === 'complete') {
+          return obj
+        }
+      }
+    })
     datelog(
       `Importing ${oldTransactions.length} transactions for ${partner.name} before date ${earliestDate}.`
     )
-    await insertTransactions(oldTransactions, `edge_${partner.name}`)
+    await insertTransactions(oldTransactions, appAndPluginId)
   }
 }
 
 async function insertTransactions(
   oldTxs: Array<ReturnType<typeof asOldTx>>,
-  pluginId: string
+  appAndPluginId: string
 ): Promise<void> {
-  const noNulls = oldTxs.filter(tx => tx.inputTXID !== null)
-  const reformattedTxs = noNulls.map(tx => {
+  const reformattedTxs = oldTxs.map(tx => {
+    if (appAndPluginId === `edge_shapeshift`) {
+      const cleanedShapeshift = asShapeshiftTx(tx)
+      return {
+        status: 'complete',
+        orderId: cleanedShapeshift.orderId,
+        depositTxid: cleanedShapeshift.inputTXID,
+        depositAddress: cleanedShapeshift.inputAddress,
+        depositCurrency: cleanedShapeshift.inputCurrency,
+        depositAmount: cleanedShapeshift.inputAmount,
+        payoutTxid: cleanedShapeshift.outputTXID,
+        payoutAddress: cleanedShapeshift.outputAddress,
+        payoutCurrency: cleanedShapeshift.outputCurrency,
+        payoutAmount: parseFloat(cleanedShapeshift.outputAmount),
+        timestamp: cleanedShapeshift.timestamp,
+        isoDate: new Date(cleanedShapeshift.timestamp * 1000).toISOString(),
+        usdValue: undefined,
+        rawTx: tx
+      }
+    }
     const orderId = asString(tx.inputTXID)
     const timestamp =
       typeof tx.timestamp === 'number' ? tx.timestamp : parseInt(tx.timestamp)
@@ -171,7 +215,7 @@ async function insertTransactions(
   for (const transaction of reformattedTxs) {
     // TODO: Add batching for more than 500 transactions
     transaction.orderId = transaction.orderId.toLowerCase()
-    const key = `${pluginId}:${transaction.orderId}`.toLowerCase()
+    const key = `${appAndPluginId}:${transaction.orderId}`.toLowerCase()
     const result = await dbTransactions.get(key).catch(e => {
       if (e != null && e.error === 'not_found') {
         return {}
