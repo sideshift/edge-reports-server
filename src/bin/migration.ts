@@ -9,7 +9,8 @@ import {
   asString,
   asObject,
   asNull,
-  asBoolean
+  asBoolean,
+  asOptional
 } from 'cleaners'
 import js from 'jsonfile'
 
@@ -60,7 +61,7 @@ const asShapeshiftTx = asObject({
   inputCurrency: asString,
   inputAmount: asNumber,
   outputTXID: asString,
-  outputAddress: asString,
+  outputAddress: asOptional(asString),
   outputCurrency: asString,
   outputAmount: asString,
   timestamp: asNumber
@@ -134,7 +135,7 @@ async function migration(): Promise<void> {
     const earliestDate = new Date(earliestTimestamp * 1000).toISOString()
     const oldTransactions = partner.txs.filter(obj => {
       if (obj.timestamp < earliestTimestamp && obj.inputTXID !== null) {
-        if (partnerJSON.name !== 'shapeshift') {
+        if (partner.name !== 'shapeshift') {
           return obj
         }
         if (obj.status === 'complete') {
