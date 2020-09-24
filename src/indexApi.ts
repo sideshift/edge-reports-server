@@ -124,10 +124,6 @@ async function main(): Promise<void> {
       res.status(500).send(`Internal server error.`)
       return
     }
-    // TODO: put the sort within the query, need to add default indexs in the database.
-    // const sortedTxs = result.docs.sort(function(a, b) {
-    //   return a.timestamp - b.timestamp
-    // })
     const answer = getAnalytics(
       result,
       queryStart,
