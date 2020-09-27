@@ -9,9 +9,9 @@ import {
   asUnknown
 } from 'cleaners'
 import fetch from 'node-fetch'
-import { datelog } from '../util'
 
 import { PartnerPlugin, PluginParams, PluginResult, StandardTx } from '../types'
+import { datelog } from '../util'
 
 const asBitrefillTx = asObject({
   paymentReceived: asBoolean,
@@ -68,12 +68,16 @@ export async function queryBitrefill(
   let count = 0
   while (true) {
     let jsonObj: ReturnType<typeof asBitrefillResult>
+    datelog('Headers: ', headers)
     try {
       const result = await fetch(url, {
         method: 'GET',
         headers
       })
-      jsonObj = asBitrefillResult(await result.json())
+      datelog('result', result)
+      const responseObj = await result.json()
+      // datelog('responseObj', responseObj)
+      jsonObj = asBitrefillResult(responseObj)
     } catch (e) {
       datelog(e)
       break
