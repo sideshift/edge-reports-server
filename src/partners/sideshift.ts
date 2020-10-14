@@ -28,7 +28,7 @@ const asSideshiftResult = asObject({
   orders: asArray(asUnknown)
 })
 
-const PAGE_LIMIT = 500
+const LIMIT = 500
 const QUERY_LOOKBACK = 60 * 60 * 24 * 5 // 5 days
 
 function affiliateSignature(
@@ -42,11 +42,13 @@ function affiliateSignature(
     .digest('hex')
 }
 
-export async function querySideshift({
-  settings,
-  apiKeys
-}: PluginParams): Promise<PluginResult> {
-  const { sideshiftAffiliateId, sideshiftAffiliateSecret } = apiKeys
+export async function querySideshift(
+  pluginParams: PluginParams
+): Promise<PluginResult> {
+  const {
+    apiKeys: { sideshiftAffiliateId, sideshiftAffiliateSecret },
+    settings
+  } = pluginParams
   const time = Date.now()
   let offset = 0
   const ssFormatTxs: StandardTx[] = []
@@ -72,7 +74,7 @@ export async function querySideshift({
   let newLatestTimeStamp = latestTimeStamp
   let done = false
   while (!done) {
-    const url = `https://sideshift.ai/api/affiliate/completedOrders?limit=${PAGE_LIMIT}&offset=${offset}&affiliateId=${sideshiftAffiliateId}&time=${time}&signature=${signature}`
+    const url = `https://sideshift.ai/api/affiliate/completedOrders?limit=${LIMIT}&offset=${offset}&affiliateId=${sideshiftAffiliateId}&time=${time}&signature=${signature}`
     let jsonObj: ReturnType<typeof asSideshiftResult>
     let resultJSON
     try {
@@ -114,10 +116,11 @@ export async function querySideshift({
         }
       }
     }
-    if (txs.length < PAGE_LIMIT) {
+    offset += LIMIT
+
+    if (txs.length < LIMIT) {
       break
     }
-    offset += PAGE_LIMIT
   }
   const out: PluginResult = {
     settings: { latestTimeStamp: newLatestTimeStamp },
