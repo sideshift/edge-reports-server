@@ -31,22 +31,36 @@ const asSideshiftResult = asObject({
 const PAGE_LIMIT = 500
 const QUERY_LOOKBACK = 60 * 60 * 24 * 5 // 5 days
 
-export async function querySideshift(
-  pluginParams: PluginParams
-): Promise<PluginResult> {
+function affiliateSignature(
+  affiliateId: string,
+  affiliateSecret: string,
+  time: number
+): string {
+  return crypto
+    .createHmac('sha1', affiliateSecret)
+    .update(affiliateId + time)
+    .digest('hex')
+}
+
+export async function querySideshift({
+  settings,
+  apiKeys
+}: PluginParams): Promise<PluginResult> {
+  const { sideshiftAffiliateId, sideshiftAffiliateSecret } = apiKeys
+  const time = Date.now()
   let offset = 0
   const ssFormatTxs: StandardTx[] = []
   let signature = ''
   let latestTimeStamp = 0
-  if (typeof pluginParams.settings.latestTimeStamp === 'number') {
-    latestTimeStamp = pluginParams.settings.latestTimeStamp
+  if (typeof settings.latestTimeStamp === 'number') {
+    latestTimeStamp = settings.latestTimeStamp
   }
-  const nonce = String(Date.now())
-  if (typeof pluginParams.apiKeys.sideshiftSecret === 'string') {
-    signature = crypto
-      .createHmac('sha256', pluginParams.apiKeys.sideshiftSecret)
-      .update(nonce)
-      .digest('hex')
+  if (typeof sideshiftAffiliateSecret === 'string') {
+    signature = affiliateSignature(
+      sideshiftAffiliateId,
+      sideshiftAffiliateSecret,
+      time
+    )
   } else {
     return {
       settings: {
@@ -58,7 +72,7 @@ export async function querySideshift(
   let newLatestTimeStamp = latestTimeStamp
   let done = false
   while (!done) {
-    const url = `https://sideshift.ai/api/affiliate/completedOrders?limit=${PAGE_LIMIT}&offset=${offset}&affiliateId=${config.sideShiftAffiliateId}&time=${time}&signature=${signature}`
+    const url = `https://sideshift.ai/api/affiliate/completedOrders?limit=${PAGE_LIMIT}&offset=${offset}&affiliateId=${sideshiftAffiliateId}&time=${time}&signature=${signature}`
     let jsonObj: ReturnType<typeof asSideshiftResult>
     let resultJSON
     try {
@@ -103,7 +117,7 @@ export async function querySideshift(
     if (txs.length < PAGE_LIMIT) {
       break
     }
-    offset+=PAGE_LIMIT
+    offset += PAGE_LIMIT
   }
   const out: PluginResult = {
     settings: { latestTimeStamp: newLatestTimeStamp },
@@ -116,6 +130,6 @@ export const sideshift: PartnerPlugin = {
   // queryFunc will take PluginSettings as arg and return PluginResult
   queryFunc: querySideshift,
   // results in a PluginResult
-  pluginName: 'Sideshift',
+  pluginName: 'SideShift.ai',
   pluginId: 'sideshift'
 }
