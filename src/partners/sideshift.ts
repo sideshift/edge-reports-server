@@ -51,11 +51,11 @@ export async function querySideshift(
   } = pluginParams
   const time = Date.now()
   let offset = 0
-  const ssFormatTxs: StandardTx[] = []
+  const xaiFormatTxs: StandardTx[] = []
   let signature = ''
-  let latestTimeStamp = 0
-  if (typeof settings.latestTimeStamp === 'number') {
-    latestTimeStamp = settings.latestTimeStamp
+  let lastCheckedTimeStamp = 0
+  if (typeof settings.lastCheckedTimeStamp === 'number') {
+    lastCheckedTimeStamp = settings.lastCheckedTimeStamp
   }
   if (typeof sideshiftAffiliateSecret === 'string') {
     signature = affiliateSignature(
@@ -66,12 +66,12 @@ export async function querySideshift(
   } else {
     return {
       settings: {
-        latestTimeStamp: latestTimeStamp
+        lastCheckedTimeStamp: lastCheckedTimeStamp
       },
       transactions: []
     }
   }
-  let newLatestTimeStamp = latestTimeStamp
+  let newestTimeStamp = 0
   let done = false
   while (!done) {
     const url = `https://sideshift.ai/api/affiliate/completedOrders?limit=${LIMIT}&offset=${offset}&affiliateId=${sideshiftAffiliateId}&time=${time}&signature=${signature}`
@@ -91,7 +91,7 @@ export async function querySideshift(
         const tx = asSideshiftTx(rawtx)
         const date = new Date(tx.createdAt)
         const timestamp = date.getTime() / 1000
-        const ssTx: StandardTx = {
+        const xaiTx: StandardTx = {
           status: 'complete',
           orderId: tx.id,
           depositTxid: undefined,
@@ -107,11 +107,11 @@ export async function querySideshift(
           usdValue: undefined,
           rawTx: rawtx
         }
-        ssFormatTxs.push(ssTx)
-        if (timestamp > newLatestTimeStamp) {
-          newLatestTimeStamp = timestamp
+        xaiFormatTxs.push(xaiTx)
+        if (timestamp > newestTimeStamp) {
+          newestTimeStamp = timestamp
         }
-        if (timestamp < latestTimeStamp - QUERY_LOOKBACK) {
+        if (lastCheckedTimeStamp > timestamp) {
           done = true
         }
       }
@@ -123,8 +123,8 @@ export async function querySideshift(
     }
   }
   const out: PluginResult = {
-    settings: { latestTimeStamp: newLatestTimeStamp },
-    transactions: ssFormatTxs
+    settings: { lastCheckedTimeStamp: newestTimeStamp },
+    transactions: xaiFormatTxs
   }
   return out
 }
