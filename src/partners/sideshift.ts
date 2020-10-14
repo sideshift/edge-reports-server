@@ -30,7 +30,7 @@ function affiliateSignature(
 ): string {
   return crypto
     .createHmac('sha1', affiliateSecret)
-    .update(affiliateId + time)
+    .update(`${affiliateId}${time}`)
     .digest('hex')
 }
 
@@ -47,7 +47,7 @@ async function fetchTransactions(
 
   try {
     const response = await fetch(url)
-    const orders = await response.json() as any[]
+    const orders = await response.json()
 
     return orders.map(order => {
       const tx = asSideshiftTx(order)
@@ -101,21 +101,22 @@ export async function querySideshift(
   const txs: StandardTx[] = []
 
   let newestTimestamp = 0
-  
+
   let offset = initialOffset ?? 0
 
   while (true) {
-    const newTxs = await fetchTransactions(sideshiftAffiliateId, sideshiftAffiliateSecret, offset, LIMIT)
+    const newTxs = await fetchTransactions(
+      sideshiftAffiliateId,
+      sideshiftAffiliateSecret,
+      offset,
+      LIMIT
+    )
 
     const txTakeCount = Math.min(newTxs.length, LIMIT)
     txs.push(...newTxs.slice(0, txTakeCount))
 
-    // maybe ^ this still aadds too many newTxs to txs.
-    // Because it's not supposed to .push anything with lastCheckedTimestamp over maxTimestamp??
-    // before it would push one by one, and break (with done=true) before adding a next one
-
     const maxTimestamp = Math.max(...newTxs.map(tx => tx.timestamp))
-    
+
     if (maxTimestamp > newestTimestamp) {
       newestTimestamp = maxTimestamp
     }
