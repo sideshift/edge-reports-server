@@ -20,7 +20,7 @@ const asSideshiftTx = asObject({
   createdAt: asString
 })
 
-const LIMIT = 2
+const LIMIT = 500
 const QUERY_LOOKBACK = 60 * 60 * 24 * 5 // 5 days
 
 function affiliateSignature(
