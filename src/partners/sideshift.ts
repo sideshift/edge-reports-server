@@ -47,15 +47,15 @@ export async function querySideshift(
 ): Promise<PluginResult> {
   const {
     apiKeys: { sideshiftAffiliateId, sideshiftAffiliateSecret },
-    settings
+    settings: {latestTimeStamp}
   } = pluginParams
   const time = Date.now()
   let offset = 0
   const xaiFormatTxs: StandardTx[] = []
   let signature = ''
   let lastCheckedTimeStamp = 0
-  if (typeof settings.lastCheckedTimeStamp === 'number') {
-    lastCheckedTimeStamp = settings.lastCheckedTimeStamp
+  if (typeof latestTimeStamp === 'number') {
+    lastCheckedTimeStamp = latestTimeStamp - QUERY_LOOKBACK
   }
   if (typeof sideshiftAffiliateSecret === 'string') {
     signature = affiliateSignature(
@@ -122,6 +122,8 @@ export async function querySideshift(
       break
     }
   }
+  console.log("xaiFormatTxs "  + xaiFormatTxs);
+  
   const out: PluginResult = {
     settings: { lastCheckedTimeStamp: newestTimeStamp },
     transactions: xaiFormatTxs
