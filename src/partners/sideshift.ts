@@ -1,4 +1,4 @@
-import { asArray, asNumber, asObject, asString, asUnknown } from 'cleaners'
+import { asObject, asString } from 'cleaners'
 import crypto from 'crypto'
 import fetch from 'node-fetch'
 
@@ -11,24 +11,16 @@ const asSideshiftTx = asObject({
     address: asString
   }),
   depositAsset: asString,
-  invoiceAmount: asNumber,
+  invoiceAmount: asString,
   settleAddress: asObject({
     address: asString
   }),
   settleAsset: asString,
-  settleAmount: asNumber,
+  settleAmount: asString,
   createdAt: asString
 })
 
-const asRawSideshiftTx = asObject({
-  status: asString
-})
-
-const asSideshiftResult = asObject({
-  orders: asArray(asUnknown)
-})
-
-const LIMIT = 500
+const LIMIT = 2
 const QUERY_LOOKBACK = 60 * 60 * 24 * 5 // 5 days
 
 function affiliateSignature(
@@ -42,99 +34,107 @@ function affiliateSignature(
     .digest('hex')
 }
 
+async function fetchTransactions(
+  affiliateId: string,
+  affiliateSecret: string,
+  offset: number,
+  limit: number
+): Promise<StandardTx[]> {
+  const time = Date.now()
+
+  const signature = affiliateSignature(affiliateId, affiliateSecret, time)
+  const url = `https://sideshift.ai/api/affiliate/completedOrders?limit=${limit}&offset=${offset}&affiliateId=${affiliateId}&time=${time}&signature=${signature}`
+
+  try {
+    const response = await fetch(url)
+    const orders = await response.json() as any[]
+
+    return orders.map(order => {
+      const tx = asSideshiftTx(order)
+
+      return {
+        status: 'complete',
+        orderId: tx.id,
+        depositTxid: undefined,
+        depositAddress: tx.depositAddress.address,
+        depositCurrency: tx.depositAsset.toUpperCase(),
+        depositAmount: Number(tx.invoiceAmount),
+        payoutTxid: undefined,
+        payoutAddress: tx.settleAddress.address,
+        payoutCurrency: tx.settleAsset.toUpperCase(),
+        payoutAmount: Number(tx.settleAmount),
+        timestamp: new Date(tx.createdAt).getTime() / 1000,
+        isoDate: tx.createdAt,
+        usdValue: undefined,
+        rawTx: order
+      }
+    })
+  } catch (e) {
+    datelog(e)
+    throw e
+  }
+}
+
 export async function querySideshift(
   pluginParams: PluginParams
 ): Promise<PluginResult> {
   const {
     apiKeys: { sideshiftAffiliateId, sideshiftAffiliateSecret },
-    settings: {latestTimeStamp}
+    settings: { latestTimestamp, offset: initialOffset }
   } = pluginParams
-  const time = Date.now()
-  let offset = 0
-  const xaiFormatTxs: StandardTx[] = []
-  let signature = ''
-  let lastCheckedTimeStamp = 0
-  if (typeof latestTimeStamp === 'number') {
-    lastCheckedTimeStamp = latestTimeStamp - QUERY_LOOKBACK
+
+  let lastCheckedTimestamp = 0
+
+  if (typeof latestTimestamp === 'number') {
+    lastCheckedTimestamp = latestTimestamp - QUERY_LOOKBACK
   }
-  if (typeof sideshiftAffiliateSecret === 'string') {
-    signature = affiliateSignature(
-      sideshiftAffiliateId,
-      sideshiftAffiliateSecret,
-      time
-    )
-  } else {
+
+  if (!(typeof sideshiftAffiliateSecret === 'string')) {
     return {
       settings: {
-        lastCheckedTimeStamp: lastCheckedTimeStamp
+        lastCheckedTimestamp: lastCheckedTimestamp
       },
       transactions: []
     }
   }
-  let newestTimeStamp = 0
-  let done = false
-  while (!done) {
-    const url = `https://sideshift.ai/api/affiliate/completedOrders?limit=${LIMIT}&offset=${offset}&affiliateId=${sideshiftAffiliateId}&time=${time}&signature=${signature}`
-    let jsonObj: ReturnType<typeof asSideshiftResult>
-    let resultJSON
-    try {
-      const result = await fetch(url, { method: 'GET' })
-      resultJSON = await result.json()
-      jsonObj = asSideshiftResult(resultJSON)
-    } catch (e) {
-      datelog(e)
-      throw e
-    }
-    const txs = jsonObj.orders
-    for (const rawtx of txs) {
-      if (asRawSideshiftTx(rawtx).status === 'complete') {
-        const tx = asSideshiftTx(rawtx)
-        const date = new Date(tx.createdAt)
-        const timestamp = date.getTime() / 1000
-        const xaiTx: StandardTx = {
-          status: 'complete',
-          orderId: tx.id,
-          depositTxid: undefined,
-          depositAddress: tx.depositAddress.address,
-          depositCurrency: tx.depositAsset.toUpperCase(),
-          depositAmount: tx.invoiceAmount,
-          payoutTxid: undefined,
-          payoutAddress: tx.settleAddress.address,
-          payoutCurrency: tx.settleAsset.toUpperCase(),
-          payoutAmount: tx.settleAmount,
-          timestamp,
-          isoDate: tx.createdAt,
-          usdValue: undefined,
-          rawTx: rawtx
-        }
-        xaiFormatTxs.push(xaiTx)
-        if (timestamp > newestTimeStamp) {
-          newestTimeStamp = timestamp
-        }
-        if (lastCheckedTimeStamp > timestamp) {
-          done = true
-        }
-      }
-    }
-    offset += LIMIT
 
-    if (txs.length < LIMIT) {
+  const txs: StandardTx[] = []
+
+  let newestTimestamp = 0
+  
+  let offset = initialOffset ?? 0
+
+  while (true) {
+    const newTxs = await fetchTransactions(sideshiftAffiliateId, sideshiftAffiliateSecret, offset, LIMIT)
+
+    const txTakeCount = Math.min(newTxs.length, LIMIT)
+    txs.push(...newTxs.slice(0, txTakeCount))
+
+    // maybe ^ this still aadds too many newTxs to txs.
+    // Because it's not supposed to .push anything with lastCheckedTimestamp over maxTimestamp??
+    // before it would push one by one, and break (with done=true) before adding a next one
+
+    const maxTimestamp = Math.max(...newTxs.map(tx => tx.timestamp))
+    
+    if (maxTimestamp > newestTimestamp) {
+      newestTimestamp = maxTimestamp
+    }
+
+    if (lastCheckedTimestamp > maxTimestamp || newTxs.length < LIMIT) {
       break
     }
+
+    offset += LIMIT
   }
-  console.log("xaiFormatTxs "  + xaiFormatTxs);
-  
-  const out: PluginResult = {
-    settings: { lastCheckedTimeStamp: newestTimeStamp },
-    transactions: xaiFormatTxs
+
+  return {
+    settings: { lastCheckedTimestamp: newestTimestamp, offset },
+    transactions: txs
   }
-  return out
 }
 
 export const sideshift: PartnerPlugin = {
-  // queryFunc will take PluginSettings as arg and return PluginResult
   queryFunc: querySideshift,
-  // results in a PluginResult
   pluginName: 'SideShift.ai',
   pluginId: 'sideshift'
 }
