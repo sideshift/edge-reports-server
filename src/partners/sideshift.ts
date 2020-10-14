@@ -79,30 +79,26 @@ export async function querySideshift(
   pluginParams: PluginParams
 ): Promise<PluginResult> {
   const {
-    apiKeys: { sideshiftAffiliateId, sideshiftAffiliateSecret },
-    settings: { latestTimestamp, offset: initialOffset }
+    apiKeys: { sideshiftAffiliateId, sideshiftAffiliateSecret }
+  } = pluginParams
+  let {
+    settings: { lastCheckedTimestamp, offset }
   } = pluginParams
 
-  let lastCheckedTimestamp = 0
-
-  if (typeof latestTimestamp === 'number') {
-    lastCheckedTimestamp = latestTimestamp - QUERY_LOOKBACK
+  if (typeof lastCheckedTimestamp === 'number') {
+    lastCheckedTimestamp -= QUERY_LOOKBACK
   }
 
   if (!(typeof sideshiftAffiliateSecret === 'string')) {
     return {
-      settings: {
-        lastCheckedTimestamp: lastCheckedTimestamp
-      },
+      settings: { lastCheckedTimestamp },
       transactions: []
     }
   }
 
   const txs: StandardTx[] = []
 
-  let newestTimestamp = 0
-
-  let offset = initialOffset ?? 0
+  let prevMaxTimestamp = 0
 
   while (true) {
     const newTxs = await fetchTransactions(
@@ -112,24 +108,23 @@ export async function querySideshift(
       LIMIT
     )
 
-    const txTakeCount = Math.min(newTxs.length, LIMIT)
-    txs.push(...newTxs.slice(0, txTakeCount))
+    txs.push(...newTxs)
 
-    const maxTimestamp = Math.max(...newTxs.map(tx => tx.timestamp))
+    offset += newTxs.length
 
-    if (maxTimestamp > newestTimestamp) {
-      newestTimestamp = maxTimestamp
+    const newTxMaxTimestamp = Math.max(...newTxs.map(tx => tx.timestamp))
+
+    if (newTxMaxTimestamp > prevMaxTimestamp) {
+      prevMaxTimestamp = newTxMaxTimestamp
     }
 
-    if (lastCheckedTimestamp > maxTimestamp || newTxs.length < LIMIT) {
+    if (lastCheckedTimestamp > newTxMaxTimestamp || newTxs.length < LIMIT) {
       break
     }
-
-    offset += LIMIT
   }
 
   return {
-    settings: { lastCheckedTimestamp: newestTimestamp, offset },
+    settings: { lastCheckedTimestamp: prevMaxTimestamp, offset },
     transactions: txs
   }
 }
